@@ -36,5 +36,5 @@ function Rotas() {
 }
 
 export default function App() {
-  return <AppProvider><BrowserRouter><Rotas /></BrowserRouter></AppProvider>
+  return <AppProvider><BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}><Rotas /></BrowserRouter></AppProvider>
 }
