@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Copy, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { Copy, FileText, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import ProdutoModal from '../components/ProdutoModal'
 import { supabase } from '../lib/supabase'
 import { useTable } from '../lib/useData'
 import { useApp } from '../lib/AppContext'
@@ -36,7 +37,7 @@ export default function Vendas() {
   function nova() {
     setForm({
       venda: { cliente_id: null, cliente_nome: '', data: hojeISO(), status: 'pago', previsao_entrega: null, forma_pagamento: null,
-        despesas: 0, quebras: 0, frete_br: 0, desconto: 0, aliquota_imposto: aliquotaAtual, observacoes: null },
+        despesas: 0, quebras: 0, frete_br: 0, desconto: 0, aliquota_imposto: aliquotaAtual, observacoes: null, emitir_nf: true, nf_numero: null },
       itens: [itemNovo()],
     })
   }
@@ -46,7 +47,8 @@ export default function Vendas() {
       id: duplicar ? undefined : v.id, cliente_id: v.cliente_id, cliente_nome: v.cliente_nome ?? '', data: duplicar ? hojeISO() : v.data,
       status: duplicar ? 'pago' : v.status, previsao_entrega: v.previsao_entrega, forma_pagamento: v.forma_pagamento,
       despesas: Number(v.despesas), quebras: Number(v.quebras), frete_br: Number(v.frete_br), desconto: Number(v.desconto),
-      aliquota_imposto: duplicar ? aliquotaAtual : Number(v.aliquota_imposto), observacoes: v.observacoes,
+      aliquota_imposto: duplicar ? (v.emitir_nf === false ? 0 : aliquotaAtual) : Number(v.aliquota_imposto), observacoes: v.observacoes,
+      emitir_nf: v.emitir_nf, nf_numero: duplicar ? null : v.nf_numero,
     }
     setForm({ venda, itens: (itens ?? []).map((i) => ({ ...i, id: duplicar ? undefined : i.id, quantidade: Number(i.quantidade), preco_unit: Number(i.preco_unit),
       custo_unit_moeda: i.custo_unit_moeda == null ? null : Number(i.custo_unit_moeda), cambio: i.cambio == null ? null : Number(i.cambio),
@@ -75,7 +77,7 @@ export default function Vendas() {
       <div className="card overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-100">
           <thead className="bg-slate-50"><tr>
-            <th className="th">Data</th><th className="th">Cliente</th><th className="th">Produto</th><th className="th">Status</th>
+            <th className="th">Data</th><th className="th">Cliente</th><th className="th">Produto</th><th className="th">Status</th><th className="th">NF</th>
             <th className="th text-right">Venda</th><th className="th text-right">Custo</th><th className="th text-right">Despesas</th>
             <th className="th text-right">Imposto</th><th className="th text-right">Lucro líq.</th><th className="th text-right">Margem</th><th className="th" />
           </tr></thead>
@@ -86,6 +88,8 @@ export default function Vendas() {
                 <td className="td max-w-[10rem] truncate font-medium">{v.cliente_nome ?? <span className="text-slate-400">—</span>}{v.cliente_uf && <span className="ml-1 text-xs text-slate-400">{v.cliente_uf}</span>}</td>
                 <td className="td max-w-[13rem] truncate" title={v.produtos}>{v.produtos || v.observacoes}</td>
                 <td className="td" title={v.previsao_entrega ? `Previsão: ${v.previsao_entrega}` : undefined}><Badge className={STATUS_VENDA[v.status].cor}>{STATUS_VENDA[v.status].label}{v.previsao_entrega ? ` · ${v.previsao_entrega.slice(0, 3)}` : ''}</Badge></td>
+                <td className="td">{v.emitir_nf === true ? <Badge className="bg-sky-100 text-sky-800">{v.nf_numero ? `NF ${v.nf_numero}` : 'Com NF'}</Badge>
+                  : v.emitir_nf === false ? <Badge className="bg-slate-100 text-slate-600">Sem NF</Badge> : <span className="text-xs text-slate-400">—</span>}</td>
                 <td className="td text-right tabular-nums">{fmtBRL(v.receita)}</td>
                 <td className="td text-right tabular-nums text-slate-600">{fmtBRL(v.custo_total)}</td>
                 <td className="td text-right tabular-nums text-slate-600">{fmtBRL(v.despesas_total)}</td>
@@ -102,7 +106,7 @@ export default function Vendas() {
           </tbody>
           {validas.length > 0 && (
             <tfoot className="bg-slate-50 font-semibold"><tr>
-              <td className="td" colSpan={4}>Total ({validas.length} vendas, sem orçamentos/canceladas)</td>
+              <td className="td" colSpan={5}>Total ({validas.length} vendas, sem orçamentos/canceladas)</td>
               <td className="td text-right tabular-nums">{fmtBRL(tot.receita)}</td>
               <td className="td text-right tabular-nums">{fmtBRL(tot.custo)}</td>
               <td className="td text-right tabular-nums">{fmtBRL(tot.desp)}</td>
@@ -128,10 +132,20 @@ function VendaForm({ inicial, novoItem, onClose, onSaved }: {
   const [estoque, setEstoque] = useState<EstoqueView[]>([])
   const [erro, setErro] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [prodModal, setProdModal] = useState<{ idx: number; id: string | null } | null>(null)
+  const { aliquotaAtual } = useApp()
+
+  function carregarEstoque() {
+    return supabase.from('vw_estoque').select('*').eq('ativo', true).order('nome').then(({ data }) => {
+      const lista = (data ?? []) as EstoqueView[]
+      setEstoque(lista)
+      return lista
+    })
+  }
 
   useEffect(() => {
     supabase.from('clientes').select('*').order('nome').then(({ data }) => setClientes((data ?? []) as Cliente[]))
-    supabase.from('vw_estoque').select('*').eq('ativo', true).order('nome').then(({ data }) => setEstoque((data ?? []) as EstoqueView[]))
+    carregarEstoque()
   }, [])
 
   const t = totaisVenda(itens, v)
@@ -208,6 +222,19 @@ function VendaForm({ inicial, novoItem, onClose, onSaved }: {
           </select>
         </Field>
         <Field label="Previsão entrega" className="md:col-span-1"><input className="input" placeholder="ex.: Novembro" value={v.previsao_entrega ?? ''} onChange={(e) => setV({ ...v, previsao_entrega: e.target.value || null })} /></Field>
+        <div className="col-span-2 flex flex-wrap items-end gap-3 rounded-lg bg-slate-50 px-3 py-2 md:col-span-6">
+          <span className="flex items-center gap-1.5 pb-2 text-sm font-medium text-slate-700"><FileText size={15} /> Nota fiscal:</span>
+          <label className="flex items-center gap-1.5 pb-2 text-sm">
+            <input type="radio" name="nf" checked={v.emitir_nf !== false} onChange={() => setV({ ...v, emitir_nf: true, aliquota_imposto: v.aliquota_imposto || aliquotaAtual })} /> Emitir NF
+          </label>
+          <label className="flex items-center gap-1.5 pb-2 text-sm">
+            <input type="radio" name="nf" checked={v.emitir_nf === false} onChange={() => setV({ ...v, emitir_nf: false, nf_numero: null, aliquota_imposto: 0 })} /> Sem NF
+          </label>
+          {v.emitir_nf !== false && (
+            <Field label="Nº da NF (opcional)" className="w-40"><input className="input" value={v.nf_numero ?? ''} onChange={(e) => setV({ ...v, nf_numero: e.target.value || null })} /></Field>
+          )}
+          <span className="pb-2 text-xs text-slate-500">{v.emitir_nf === false ? 'Sem NF: o Simples desta venda fica zerado e ela não entra no RBT12.' : `Simples aplicado: ${fmtPct(v.aliquota_imposto, 2)}`}</span>
+        </div>
       </div>
 
       <div className="mt-5 mb-2 flex items-center justify-between">
@@ -221,10 +248,15 @@ function VendaForm({ inicial, novoItem, onClose, onSaved }: {
             <div key={idx} className="rounded-lg border border-slate-200 p-3">
               <div className="grid grid-cols-2 gap-2 md:grid-cols-12">
                 <Field label="Produto" className="col-span-2 md:col-span-5">
-                  <select className="input" value={it.produto_id ?? ''} onChange={(e) => escolherProduto(idx, e.target.value)}>
-                    <option value="">— avulso (use a descrição) —</option>
-                    {estoque.map((e) => <option key={e.produto_id} value={e.produto_id}>{e.nome}{e.saldo ? ` · estoque ${e.saldo}` : ''}</option>)}
-                  </select>
+                  <div className="flex gap-1">
+                    <select className="input min-w-0" value={it.produto_id ?? ''} onChange={(e) => escolherProduto(idx, e.target.value)}>
+                      <option value="">— avulso (use a descrição) —</option>
+                      {estoque.map((e) => <option key={e.produto_id} value={e.produto_id}>{e.nome}{e.saldo ? ` · estoque ${e.saldo}` : ''}</option>)}
+                    </select>
+                    {it.produto_id && <button type="button" className="btn-ghost shrink-0 px-2" title="Abrir cadastro do produto" onClick={() => setProdModal({ idx, id: it.produto_id })}><Pencil size={15} /></button>}
+                    <button type="button" className="btn-ghost shrink-0 px-2 text-brand-700" title="Cadastrar novo produto" onClick={() => setProdModal({ idx, id: null })}><Plus size={16} /></button>
+                  </div>
+                  {p?.categoria && <span className="mt-0.5 block text-[11px] text-slate-400">{p.categoria}</span>}
                 </Field>
                 <Field label="Descrição / obs." className="col-span-2 md:col-span-3"><input className="input" value={it.descricao ?? ''} onChange={(e) => setI(idx, { descricao: e.target.value || null })} /></Field>
                 <Field label="Qtd" className="md:col-span-1"><NumInput step="1" value={it.quantidade} onChange={(n) => setI(idx, { quantidade: Math.max(1, Math.round(n)) })} /></Field>
@@ -281,6 +313,20 @@ function VendaForm({ inicial, novoItem, onClose, onSaved }: {
         <Resumo l="Lucro líquido" v={fmtBRL(t.lucro)} tone={t.lucro < 0 ? 'neg' : 'pos'} />
         <Resumo l="Margem" v={fmtPct(t.margem)} tone={t.lucro < 0 ? 'neg' : 'pos'} />
       </div>
+      {prodModal && (
+        <ProdutoModal produtoId={prodModal.id} nomeInicial={prodModal.id ? undefined : itens[prodModal.idx]?.descricao ?? ''}
+          onClose={() => setProdModal(null)}
+          onSaved={async (prod) => {
+            const idx = prodModal.idx
+            setProdModal(null)
+            const lista = await carregarEstoque()
+            const e = lista.find((x) => x.produto_id === prod.id)
+            const atual = itens[idx]
+            const patch: Partial<VendaItem> = { produto_id: prod.id }
+            if (e?.preco_venda && !atual.preco_unit) patch.preco_unit = Number(e.preco_venda)
+            setI(idx, patch)
+          }} />
+      )}
     </Modal>
   )
 }

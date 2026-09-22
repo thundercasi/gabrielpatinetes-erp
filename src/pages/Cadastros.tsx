@@ -3,7 +3,9 @@ import { Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTable, erroMsg } from '../lib/useData'
 import { Empty, ErrorBox, Field, Modal, PageHeader } from '../components/ui'
-import { CATEGORIAS, UFS, type Cliente, type Fornecedor, type Produto } from '../lib/types'
+import { UFS, type CategoriaProduto, type Cliente, type Fornecedor, type Produto } from '../lib/types'
+import { Link } from 'react-router-dom'
+import ProdutoModal from '../components/ProdutoModal'
 import { fmtBRL, fmtMoeda } from '../lib/format'
 
 type Tipo = 'text' | 'number' | 'textarea' | 'select' | 'checkbox'
@@ -150,23 +152,82 @@ export function Fornecedores() {
     ]} />
 }
 
-export function Produtos() {
-  return <CrudPage<Produto> title="Produtos" subtitle="Catálogo de patinetes, bikes, drones, motos e acessórios" table="produtos"
-    novo={{ nome: '', categoria: 'patinete', ativo: true, estoque_minimo: 0 }}
-    busca={(r) => `${r.nome} ${r.marca ?? ''} ${r.modelo ?? ''} ${r.sku ?? ''} ${CATEGORIAS[r.categoria]}`}
+export function Categorias() {
+  return <CrudPage<CategoriaProduto> title="Categorias" subtitle="Grupos de produtos (patinete, bike, peça…). Excluir uma categoria deixa os produtos dela sem categoria." table="categorias"
+    novo={{ nome: '', ativo: true }}
+    busca={(r) => r.nome}
     campos={[
       { key: 'nome', label: 'Nome', required: true },
-      { key: 'categoria', label: 'Categoria', tipo: 'select', options: CATEGORIAS, span: 1 }, { key: 'marca', label: 'Marca', span: 1 },
-      { key: 'modelo', label: 'Modelo', span: 1 }, { key: 'sku', label: 'SKU / código', span: 1 },
-      { key: 'custo_ref_moeda', label: 'Custo de referência (USD)', tipo: 'number', span: 1 }, { key: 'preco_venda', label: 'Preço de venda (R$)', tipo: 'number', span: 1 },
-      { key: 'estoque_minimo', label: 'Estoque mínimo', tipo: 'number', span: 1 }, { key: 'ativo', label: 'Ativo', tipo: 'checkbox', span: 1 },
-      { key: 'observacoes', label: 'Observações', tipo: 'textarea' },
+      { key: 'ativo', label: 'Ativa (aparece na lista ao cadastrar produto)', tipo: 'checkbox' },
     ]}
     colunas={[
-      { label: 'Produto', render: (r) => <span className={`font-medium ${r.ativo ? '' : 'text-slate-400 line-through'}`}>{r.nome}</span> },
-      { label: 'Categoria', render: (r) => CATEGORIAS[r.categoria] },
-      { label: 'Marca', render: (r) => r.marca ?? '—' },
-      { label: 'Custo ref.', render: (r) => r.custo_ref_moeda != null ? fmtMoeda(r.custo_ref_moeda) : '—', className: 'text-right tabular-nums' },
-      { label: 'Preço venda', render: (r) => r.preco_venda != null ? fmtBRL(r.preco_venda) : '—', className: 'text-right tabular-nums' },
+      { label: 'Categoria', render: (r) => <span className={`font-medium ${r.ativo ? '' : 'text-slate-400 line-through'}`}>{r.nome}</span> },
     ]} />
+}
+
+export function Produtos() {
+  const { data, error, reload } = useTable<Produto>('produtos', (q) => q.order('nome'))
+  const cats = useTable<CategoriaProduto>('categorias', (q) => q.order('nome'))
+  const catNome = useMemo(() => Object.fromEntries(cats.data.map((c) => [c.id, c.nome])), [cats.data])
+  const [q, setQ] = useState('')
+  const [cat, setCat] = useState('')
+  const [edit, setEdit] = useState<{ id: string | null } | null>(null)
+
+  const lista = useMemo(() => {
+    const t = q.trim().toLowerCase()
+    return data.filter((r) => (!cat || (cat === '_sem' ? !r.categoria_id : r.categoria_id === cat)) &&
+      (!t || `${r.nome} ${r.marca ?? ''} ${r.modelo ?? ''} ${r.sku ?? ''} ${catNome[r.categoria_id ?? ''] ?? ''}`.toLowerCase().includes(t)))
+  }, [data, q, cat, catNome])
+
+  async function excluir(r: Produto) {
+    if (!confirm(`Excluir o produto ${r.nome}?`)) return
+    const { error } = await supabase.from('produtos').delete().eq('id', r.id)
+    if (error) alert(error.code === '23503' ? 'Não é possível excluir: o produto tem vendas ou compras. Desmarque "Ativo" para escondê-lo.' : erroMsg(error))
+    else reload()
+  }
+
+  return (
+    <>
+      <PageHeader title="Produtos" subtitle="Catálogo de patinetes, bikes, drones, motos e acessórios" actions={
+        <>
+          <select className="input w-44" value={cat} onChange={(e) => setCat(e.target.value)}>
+            <option value="">Todas categorias</option><option value="_sem">Sem categoria</option>
+            {cats.data.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </select>
+          <div className="relative">
+            <Search size={15} className="absolute left-2.5 top-2.5 text-slate-400" />
+            <input className="input w-56 pl-8" placeholder="Buscar…" value={q} onChange={(e) => setQ(e.target.value)} />
+          </div>
+          <Link to="/categorias" className="btn-ghost">Categorias</Link>
+          <button className="btn-primary" onClick={() => setEdit({ id: null })}><Plus size={16} /> Novo</button>
+        </>
+      } />
+      <ErrorBox msg={error} />
+      <div className="card overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-100">
+          <thead className="bg-slate-50"><tr>
+            <th className="th">Produto</th><th className="th">Categoria</th><th className="th">Marca</th>
+            <th className="th text-right">Custo ref.</th><th className="th text-right">Preço venda</th><th className="th w-20" />
+          </tr></thead>
+          <tbody className="divide-y divide-slate-100">
+            {lista.map((r) => (
+              <tr key={r.id} className="cursor-pointer hover:bg-slate-50" onClick={() => setEdit({ id: r.id })}>
+                <td className={`td font-medium ${r.ativo ? '' : 'text-slate-400 line-through'}`}>{r.nome}</td>
+                <td className="td">{catNome[r.categoria_id ?? ''] ?? <span className="text-slate-400">—</span>}</td>
+                <td className="td">{r.marca ?? '—'}</td>
+                <td className="td text-right tabular-nums">{r.custo_ref_moeda != null ? fmtMoeda(r.custo_ref_moeda) : '—'}</td>
+                <td className="td text-right tabular-nums">{r.preco_venda != null ? fmtBRL(r.preco_venda) : '—'}</td>
+                <td className="td text-right" onClick={(e) => e.stopPropagation()}>
+                  <button className="btn-ghost p-1.5" onClick={() => setEdit({ id: r.id })} aria-label="Editar"><Pencil size={15} /></button>
+                  <button className="btn-danger p-1.5" onClick={() => excluir(r)} aria-label="Excluir"><Trash2 size={15} /></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!lista.length && <Empty>Nenhum produto.</Empty>}
+      </div>
+      {edit && <ProdutoModal produtoId={edit.id} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); reload(); cats.reload() }} />}
+    </>
+  )
 }

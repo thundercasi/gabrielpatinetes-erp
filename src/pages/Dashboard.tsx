@@ -57,7 +57,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Stat label="Faturamento" value={fmtBRL(receita)} hint={`${v.length} vendas · ticket ${fmtBRL(ticket)}`} />
         <Stat label="Lucro das vendas" value={fmtBRL(lucroVendas)} tone={lucroVendas < 0 ? 'neg' : 'pos'} hint={`margem ${fmtPct(receita ? lucroVendas / receita : null)}`} />
-        <Stat label="Simples do mês" value={fmtBRL(r?.imposto)} hint={`alíquota atual ${fmtPct(aliquotaAtual, 2)}`} />
+        <Stat label="Simples do mês (estimado)" value={fmtBRL(r?.imposto)} hint={`vendas c/ NF ${fmtBRL(r?.receita_com_nf)} · alíquota atual ${fmtPct(aliquotaAtual, 2)}`} />
         <Stat label="Despesas gerais" value={fmtBRL(r?.despesas_gerais)} hint="fixas, parcelas, pró-labore" />
         <Stat label="Resultado do mês" value={fmtBRL(r?.resultado)} tone={Number(r?.resultado ?? 0) < 0 ? 'neg' : 'pos'} hint={`RBT12 ${fmtBRL(rbt12Atual)}`} />
       </div>

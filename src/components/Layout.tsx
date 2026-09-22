@@ -1,6 +1,6 @@
 import { Suspense, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { BarChart3, Boxes, ShoppingCart, Ship, Users, Factory, Package, Wallet, Settings, LogOut, Menu, Zap } from 'lucide-react'
+import { BarChart3, Boxes, Tags, ShoppingCart, Ship, Users, Factory, Package, Wallet, Settings, LogOut, Menu, Zap } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../lib/AppContext'
 
@@ -11,6 +11,7 @@ const NAV = [
   { to: '/estoque', label: 'Estoque', icon: Boxes },
   { to: '/financeiro', label: 'Financeiro', icon: Wallet },
   { to: '/produtos', label: 'Produtos', icon: Package },
+  { to: '/categorias', label: 'Categorias', icon: Tags },
   { to: '/clientes', label: 'Clientes', icon: Users },
   { to: '/fornecedores', label: 'Fornecedores', icon: Factory },
   { to: '/configuracoes', label: 'Configurações', icon: Settings },

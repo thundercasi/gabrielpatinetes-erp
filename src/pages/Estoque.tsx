@@ -3,7 +3,7 @@ import { SlidersHorizontal } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useTable } from '../lib/useData'
 import { Badge, Empty, ErrorBox, Field, Modal, NumInput, PageHeader, Stat } from '../components/ui'
-import { CATEGORIAS, type EstoqueView } from '../lib/types'
+import type { EstoqueView } from '../lib/types'
 import { fmtBRL, hojeISO } from '../lib/format'
 
 export default function Estoque() {
@@ -13,6 +13,7 @@ export default function Estoque() {
   const [erro, setErro] = useState<string | null>(null)
 
   const lista = useMemo(() => data.filter((d) => !cat || d.categoria === cat), [data, cat])
+  const categorias = useMemo(() => [...new Set(data.map((d) => d.categoria).filter(Boolean))].sort() as string[], [data])
   const valorEstoque = lista.reduce((s, d) => s + Math.max(0, d.saldo) * Number(d.custo_medio ?? 0), 0)
   const unidades = lista.reduce((s, d) => s + Math.max(0, d.saldo), 0)
   const caminho = lista.reduce((s, d) => s + Number(d.a_caminho), 0)
@@ -30,7 +31,7 @@ export default function Estoque() {
     <>
       <PageHeader title="Estoque" subtitle="Saldo = compras recebidas − vendas 'do estoque' ± ajustes" actions={
         <select className="input w-44" value={cat} onChange={(e) => setCat(e.target.value)}>
-          <option value="">Todas categorias</option>{Object.entries(CATEGORIAS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          <option value="">Todas categorias</option>{categorias.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       } />
       <ErrorBox msg={error} />
@@ -51,7 +52,7 @@ export default function Estoque() {
             {lista.map((d) => (
               <tr key={d.produto_id} className="hover:bg-slate-50">
                 <td className="td font-medium">{d.nome}</td>
-                <td className="td">{CATEGORIAS[d.categoria]}</td>
+                <td className="td">{d.categoria ?? '—'}</td>
                 <td className="td text-right tabular-nums">{d.recebido}</td>
                 <td className="td text-right tabular-nums">{d.vendido}</td>
                 <td className="td text-right tabular-nums">{d.ajustes}</td>

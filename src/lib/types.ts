@@ -1,8 +1,4 @@
-export type Categoria = 'patinete' | 'bicicleta' | 'moto' | 'drone' | 'monociclo' | 'skate' | 'acessorio' | 'peca' | 'outro'
-export const CATEGORIAS: Record<Categoria, string> = {
-  patinete: 'Patinete', bicicleta: 'Bicicleta', moto: 'Moto', drone: 'Drone', monociclo: 'Monociclo',
-  skate: 'Skate', acessorio: 'Acessório', peca: 'Peça', outro: 'Outro',
-}
+export interface CategoriaProduto { id: string; nome: string; ativo: boolean }
 
 export type StatusVenda = 'orcamento' | 'encomenda' | 'pago' | 'enviado' | 'entregue' | 'cancelado'
 export const STATUS_VENDA: Record<StatusVenda, { label: string; cor: string }> = {
@@ -33,7 +29,7 @@ export const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS',
 
 export interface Cliente { id: string; nome: string; cpf_cnpj: string | null; telefone: string | null; email: string | null; cidade: string | null; uf: string | null; endereco: string | null; observacoes: string | null }
 export interface Fornecedor { id: string; nome: string; pais: string | null; moeda: string; contato: string | null; telefone: string | null; email: string | null; observacoes: string | null }
-export interface Produto { id: string; nome: string; categoria: Categoria; marca: string | null; modelo: string | null; sku: string | null; custo_ref_moeda: number | null; preco_venda: number | null; estoque_minimo: number; ativo: boolean; observacoes: string | null }
+export interface Produto { id: string; nome: string; categoria_id: string | null; marca: string | null; modelo: string | null; sku: string | null; custo_ref_moeda: number | null; preco_venda: number | null; estoque_minimo: number; ativo: boolean; observacoes: string | null }
 
 export interface Config {
   user_id: string; nome_empresa: string | null; cnpj: string | null
@@ -44,7 +40,7 @@ export interface Config {
 export interface Venda {
   id: string; cliente_id: string | null; data: string; status: StatusVenda; previsao_entrega: string | null
   forma_pagamento: string | null; despesas: number; quebras: number; frete_br: number; desconto: number
-  aliquota_imposto: number; observacoes: string | null
+  aliquota_imposto: number; observacoes: string | null; emitir_nf: boolean | null; nf_numero: string | null
 }
 export interface VendaView extends Venda {
   cliente_nome: string | null; cliente_cidade: string | null; cliente_uf: string | null; itens_qtd: number; produtos: string
@@ -64,7 +60,7 @@ export interface CompraView extends Compra { fornecedor_nome: string | null; ite
 export interface CompraItem { id?: string; compra_id?: string; produto_id: string | null; descricao: string | null; quantidade: number; valor_unit_moeda: number }
 
 export interface EstoqueView {
-  produto_id: string; nome: string; categoria: Categoria; marca: string | null; modelo: string | null; sku: string | null; preco_venda: number | null
+  produto_id: string; nome: string; categoria_id: string | null; categoria: string | null; marca: string | null; modelo: string | null; sku: string | null; preco_venda: number | null
   estoque_minimo: number; ativo: boolean; recebido: number; a_caminho: number; vendido: number; ajustes: number; saldo: number; custo_medio: number | null
 }
 
@@ -75,5 +71,5 @@ export interface Lancamento {
 
 export interface ResumoMensal {
   mes: string; vendas: number; receita: number; custo: number; despesas_vendas: number; imposto: number; lucro_vendas: number
-  despesas_gerais: number; receitas_gerais: number; resultado: number
+  despesas_gerais: number; receitas_gerais: number; resultado: number; receita_com_nf: number
 }

@@ -11,6 +11,7 @@ const Estoque = lazy(() => import('./pages/Estoque'))
 const Financeiro = lazy(() => import('./pages/Financeiro'))
 const Clientes = lazy(() => import('./pages/Cadastros').then((m) => ({ default: m.Clientes })))
 const Fornecedores = lazy(() => import('./pages/Cadastros').then((m) => ({ default: m.Fornecedores })))
+const Categorias = lazy(() => import('./pages/Cadastros').then((m) => ({ default: m.Categorias })))
 const Produtos = lazy(() => import('./pages/Cadastros').then((m) => ({ default: m.Produtos })))
 const Configuracoes = lazy(() => import('./pages/Configuracoes'))
 
@@ -26,6 +27,7 @@ function Rotas() {
         <Route path="estoque" element={<Estoque />} />
         <Route path="financeiro" element={<Financeiro />} />
         <Route path="produtos" element={<Produtos />} />
+        <Route path="categorias" element={<Categorias />} />
         <Route path="clientes" element={<Clientes />} />
         <Route path="fornecedores" element={<Fornecedores />} />
         <Route path="configuracoes" element={<Configuracoes />} />
