@@ -4,6 +4,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { supabase } from '../lib/supabase'
 import { useTable } from '../lib/useData'
 import { useApp } from '../lib/AppContext'
+import MaisLucrativos from '../components/MaisLucrativos'
 import { Badge, Empty, MonthPicker, PageHeader, Stat } from '../components/ui'
 import { STATUS_COMPRA, STATUS_VENDA, type CompraView, type EstoqueView, type Lancamento, type ResumoMensal, type VendaView } from '../lib/types'
 import { addMeses, fimMes, fmtBRL, fmtData, fmtPct, hojeISO, inicioMes, mesAtual, nomeMes } from '../lib/format'
@@ -40,17 +41,6 @@ export default function Dashboard() {
     return { mes: `${nomeMes(m.slice(0, 7)).slice(0, 3)}/${m.slice(2, 4)}`, Faturamento: Number(x?.receita ?? 0), Lucro: Number(x?.lucro_vendas ?? 0), Resultado: Number(x?.resultado ?? 0) }
   }), [resumo.data, mes])
 
-  const topProdutos = useMemo(() => {
-    const m = new Map<string, { receita: number; lucro: number; n: number }>()
-    for (const x of v) {
-      const k = x.produtos || '—'
-      const a = m.get(k) ?? { receita: 0, lucro: 0, n: 0 }
-      a.receita += Number(x.receita); a.lucro += Number(x.lucro_liquido); a.n += 1
-      m.set(k, a)
-    }
-    return [...m.entries()].sort((a, b) => b[1].lucro - a[1].lucro).slice(0, 6)
-  }, [v])
-
   return (
     <>
       <PageHeader title="Painel" subtitle={`Visão de ${nomeMes(mes)}`} actions={<MonthPicker value={mes} onChange={setMes} />} />
@@ -79,19 +69,7 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
         </section>
-        <section className="card p-4">
-          <h2 className="mb-2 text-sm font-semibold">Mais lucrativos no mês</h2>
-          {topProdutos.length ? (
-            <ul className="divide-y divide-slate-100 text-sm">
-              {topProdutos.map(([nome, a]) => (
-                <li key={nome} className="flex items-center justify-between gap-2 py-2">
-                  <span className="truncate" title={nome}>{nome}<span className="ml-1 text-xs text-slate-400">×{a.n}</span></span>
-                  <span className={`shrink-0 tabular-nums ${a.lucro < 0 ? 'text-red-600' : 'text-emerald-700'}`}>{fmtBRL(a.lucro)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : <Empty>Sem vendas no mês.</Empty>}
-        </section>
+        <MaisLucrativos mes={mes} />
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
