@@ -3,6 +3,11 @@ name: Publicar no GitHub Pages
 on:
   push:
     branches: [main]
+  # Se o "Deploy static content to Pages" (static.yml) existir e rodar,
+  # este workflow roda de novo DEPOIS dele e publica a versão certa por cima.
+  workflow_run:
+    workflows: ["Deploy static content to Pages"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -11,7 +16,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: publicar-sistema
   cancel-in-progress: true
 
 jobs:
@@ -19,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-node@v4
         with:
           node-version: 22
