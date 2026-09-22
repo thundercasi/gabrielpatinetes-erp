@@ -14,7 +14,7 @@ export default function Dashboard() {
   const [mes, setMes] = useState(mesAtual())
   const { aliquotaAtual, rbt12Atual } = useApp()
   const vendas = useTable<VendaView>('vw_vendas', (q) => q.gte('data', inicioMes(mes)).lte('data', fimMes(mes)).not('status', 'in', '(cancelado,orcamento)'), [mes])
-  const resumo = useTable<ResumoMensal>('vw_resumo_mensal', (q) => q.gte('mes', addMeses(inicioMes(mes), -5)).lte('mes', inicioMes(mes)).order('mes'), [mes])
+  const resumo = useTable<ResumoMensal>('vw_resumo_mensal', (q) => q.gte('mes', addMeses(inicioMes(mes), -11)).lte('mes', inicioMes(mes)).order('mes'), [mes])
   const [encomendas, setEncomendas] = useState<VendaView[]>([])
   const [compras, setCompras] = useState<CompraView[]>([])
   const [baixos, setBaixos] = useState<EstoqueView[]>([])
@@ -34,10 +34,10 @@ export default function Dashboard() {
   const lucroVendas = v.reduce((s, x) => s + Number(x.lucro_liquido), 0)
   const ticket = v.length ? receita / v.length : 0
 
-  const serie = useMemo(() => Array.from({ length: 6 }, (_, i) => {
-    const m = addMeses(inicioMes(mes), i - 5)
+  const serie = useMemo(() => Array.from({ length: 12 }, (_, i) => {
+    const m = addMeses(inicioMes(mes), i - 11)
     const x = resumo.data.find((y) => y.mes === m)
-    return { mes: nomeMes(m.slice(0, 7)).slice(0, 3), Faturamento: Number(x?.receita ?? 0), Lucro: Number(x?.lucro_vendas ?? 0), Resultado: Number(x?.resultado ?? 0) }
+    return { mes: `${nomeMes(m.slice(0, 7)).slice(0, 3)}/${m.slice(2, 4)}`, Faturamento: Number(x?.receita ?? 0), Lucro: Number(x?.lucro_vendas ?? 0), Resultado: Number(x?.resultado ?? 0) }
   }), [resumo.data, mes])
 
   const topProdutos = useMemo(() => {
@@ -64,7 +64,7 @@ export default function Dashboard() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <section className="card p-4 lg:col-span-2">
-          <h2 className="mb-2 text-sm font-semibold">Últimos 6 meses</h2>
+          <h2 className="mb-2 text-sm font-semibold">Últimos 12 meses</h2>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={serie} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
