@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Copy, FileText, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import ProdutoModal from '../components/ProdutoModal'
+import ProdutoPicker from '../components/ProdutoPicker'
 import { supabase } from '../lib/supabase'
 import { useTable } from '../lib/useData'
 import { useApp } from '../lib/AppContext'
@@ -136,7 +137,7 @@ function VendaForm({ inicial, novoItem, onClose, onSaved }: {
   const { aliquotaAtual } = useApp()
 
   function carregarEstoque() {
-    return supabase.from('vw_estoque').select('*').eq('ativo', true).order('nome').then(({ data }) => {
+    return supabase.from('vw_estoque').select('*').order('nome').range(0, 4999).then(({ data }) => {
       const lista = (data ?? []) as EstoqueView[]
       setEstoque(lista)
       return lista
@@ -247,17 +248,14 @@ function VendaForm({ inicial, novoItem, onClose, onSaved }: {
           return (
             <div key={idx} className="rounded-lg border border-slate-200 p-3">
               <div className="grid grid-cols-2 gap-2 md:grid-cols-12">
-                <Field label="Produto" className="col-span-2 md:col-span-5">
+                <div className="col-span-2 md:col-span-5"><span className="label">Produto</span>
                   <div className="flex gap-1">
-                    <select className="input min-w-0" value={it.produto_id ?? ''} onChange={(e) => escolherProduto(idx, e.target.value)}>
-                      <option value="">— avulso (use a descrição) —</option>
-                      {estoque.map((e) => <option key={e.produto_id} value={e.produto_id}>{e.nome}{e.saldo ? ` · estoque ${e.saldo}` : ''}</option>)}
-                    </select>
+                    <ProdutoPicker produtos={estoque} value={it.produto_id} onChange={(id) => escolherProduto(idx, id)} />
                     {it.produto_id && <button type="button" className="btn-ghost shrink-0 px-2" title="Abrir cadastro do produto" onClick={() => setProdModal({ idx, id: it.produto_id })}><Pencil size={15} /></button>}
                     <button type="button" className="btn-ghost shrink-0 px-2 text-brand-700" title="Cadastrar novo produto" onClick={() => setProdModal({ idx, id: null })}><Plus size={16} /></button>
                   </div>
                   {p?.categoria && <span className="mt-0.5 block text-[11px] text-slate-400">{p.categoria}</span>}
-                </Field>
+                </div>
                 <Field label="Descrição / obs." className="col-span-2 md:col-span-3"><input className="input" value={it.descricao ?? ''} onChange={(e) => setI(idx, { descricao: e.target.value || null })} /></Field>
                 <Field label="Qtd" className="md:col-span-1"><NumInput step="1" value={it.quantidade} onChange={(n) => setI(idx, { quantidade: Math.max(1, Math.round(n)) })} /></Field>
                 <Field label="Preço unit. (R$)" className="md:col-span-2"><NumInput value={it.preco_unit} onChange={(n) => setI(idx, { preco_unit: n })} /></Field>
