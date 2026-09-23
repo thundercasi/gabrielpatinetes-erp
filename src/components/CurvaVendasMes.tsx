@@ -6,7 +6,7 @@ import { addMeses, fimMes, fmtBRL, hojeISO, inicioMes, nomeMes } from '../lib/fo
 interface Linha { data: string; receita: number }
 const moedaCurta = (n: number) => Math.abs(n) >= 1000 ? `${(n / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} mil` : String(n)
 
-/** Faturamento acumulado dia a dia no mês escolhido, comparado com o mês anterior. */
+/** Dois gráficos: faturamento acumulado e faturamento de cada dia, dia a dia no mês escolhido, comparado com o mês anterior. */
 export default function CurvaVendasMes({ mes }: { mes: string }) {
   const [atual, setAtual] = useState<Linha[]>([])
   const [anterior, setAnterior] = useState<Linha[]>([])
@@ -42,6 +42,8 @@ export default function CurvaVendasMes({ mes }: { mes: string }) {
       return {
         dia,
         doDia: dA.get(dia) ?? 0,
+        diaAtual: dia <= ultimoDia ? dA.get(dia) ?? 0 : null,
+        diaAnterior: dia <= diasAnt ? dB.get(dia) ?? 0 : null,
         atual: dia <= ultimoDia ? accA : null,
         anterior: dia <= diasAnt ? accB : null,
       }
@@ -55,6 +57,7 @@ export default function CurvaVendasMes({ mes }: { mes: string }) {
   const variacao = ref > 0 ? total / ref - 1 : null
 
   return (
+    <>
     <section className="card p-4">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">Curva de vendas no mês (faturamento acumulado)</h2>
@@ -85,5 +88,23 @@ export default function CurvaVendasMes({ mes }: { mes: string }) {
         </ResponsiveContainer>
       </div>
     </section>
+
+    <section className="card p-4">
+      <h2 className="mb-2 text-sm font-semibold">Vendas por dia ({nomeAtual} × {nomeAnt})</h2>
+      <div className="h-56">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={serie} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+            <CartesianGrid vertical={false} stroke="#e2e8f0" />
+            <XAxis dataKey="dia" tickLine={false} axisLine={false} fontSize={12} interval="preserveStartEnd" minTickGap={12} />
+            <YAxis tickFormatter={moedaCurta} tickLine={false} axisLine={false} fontSize={12} width={56} />
+            <Tooltip labelFormatter={(d) => `Dia ${d}`} contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(val, nome) => [fmtBRL(Number(val)), nome]} />
+            <Legend iconType="plainline" wrapperStyle={{ fontSize: 12 }} />
+            <Line name={nomeAnt} dataKey="diaAnterior" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 4" dot={{ r: 2, strokeDasharray: '' }} connectNulls={false} isAnimationActive={false} />
+            <Line name={nomeAtual} dataKey="diaAtual" stroke="#059669" strokeWidth={2} dot={{ r: 2.5 }} activeDot={{ r: 4 }} connectNulls={false} isAnimationActive={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </section>
+    </>
   )
 }
