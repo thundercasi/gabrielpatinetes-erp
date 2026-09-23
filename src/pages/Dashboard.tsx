@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useTable } from '../lib/useData'
 import { useApp } from '../lib/AppContext'
 import MaisLucrativos from '../components/MaisLucrativos'
+import CurvaVendasMes from '../components/CurvaVendasMes'
 import { Badge, Empty, MonthPicker, PageHeader, Stat } from '../components/ui'
 import { STATUS_COMPRA, STATUS_VENDA, type CompraView, type EstoqueView, type Lancamento, type ResumoMensal, type VendaView } from '../lib/types'
 import { addMeses, fimMes, fmtBRL, fmtData, fmtPct, hojeISO, inicioMes, mesAtual, nomeMes } from '../lib/format'
@@ -53,7 +54,8 @@ export default function Dashboard() {
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <section className="card p-4 lg:col-span-2">
+        <div className="space-y-4 lg:col-span-2">
+        <section className="card p-4">
           <h2 className="mb-2 text-sm font-semibold">Últimos 12 meses</h2>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -69,6 +71,8 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
         </section>
+        <CurvaVendasMes mes={mes} />
+        </div>
         <MaisLucrativos mes={mes} />
       </div>
 
